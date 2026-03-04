@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nafs Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #000;
+      color: white;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    .app-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      filter: grayscale(100%) brightness(0.5);
+      z-index: -1;
+      transition: background-image 0.5s ease-in-out;
+    }
+    .glass-panel {
+      background: rgba(20, 20, 20, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-item {
+      background: rgba(30, 30, 30, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+    .glass-item:active {
+      background: rgba(40, 40, 40, 0.6);
+      transform: scale(0.98);
+    }
+    .toggle-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .toggle-circle.active {
+      background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+      border-color: white;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    }
+    .toggle-circle.active i {
+      opacity: 1;
+      color: #1a1a1a;
+    }
+    .counter-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .counter-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.9);
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 8px 12px;
+      border-radius: 12px;
+    }
+    .nav-item:active {
+      transform: scale(0.9);
+    }
+    .nav-item.active {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .nav-item i {
+      font-size: 1.3rem;
+      margin-bottom: 4px;
+    }
+    ::-webkit-scrollbar {
+      width: 0px;
+      background: transparent;
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-content {
+      background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(20, 20, 20, 0.98) 100%);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-height: 85vh;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+    .note-item {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+    .note-item:active {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .progress-ring {
+      transition: stroke-dashoffset 0.5s ease;
+    }
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+    .status-indicator.completed {
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+    }
+    /* Input Styles */
+    .custom-input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 1rem;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+    .custom-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .custom-input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+    textarea.custom-input {
+      resize: none;
+      min-height: 100px;
+    }
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .custom-checkbox.checked {
+      background: #4ade80;
+      border-color: #4ade80;
+    }
+    .custom-checkbox.checked i {
+      opacity: 1;
+      color: #000;
+      font-size: 12px;
+    }
+    .custom-checkbox i {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .streak-badge {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    /* Stats Tabs */
+    .stats-tab {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+    .stats-tab.active {
+      display: flex;
+    }
+    .tab-selector {
+      display: flex;
+      background: rgba(20, 20, 20, 0.5);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-bg" id="app-bg"></div>
+  <div class="relative h-screen flex flex-col max-w-md mx-auto w-full">
+    <!-- Header -->
+    <div class="pt-4 px-4 pb-2 flex justify-between items-center text-sm font-light opacity-70">
+      <span id="clock">18:31</span>
+      <div class="flex gap-3">
+        <i class="fas fa-wifi"></i>
+        <i class="fas fa-battery-full"></i>
+      </div>
+    </div>
+    <!-- Main Content -->
+    <div id="main-content" class="flex-1 overflow-y-auto px-4 pb-28 fade-in">
+      <!-- Date & Streak -->
+      <div class="flex justify-between items-center mb-4 mt-2">
+        <div>
+          <p class="text-xs opacity-50" id="day-name">Понедельник</p>
+          <h2 class="text-2xl font-bold" id="current-date">24 Февраля</h2>
+        </div>
+        <div class="streak-badge">
+          <i class="fas fa-fire"></i>
+          <span id="streak-count">1</span> дней
+        </div>
+      </div>
+      <!-- Progress Ring -->
+      <div class="glass-panel rounded-2xl p-4 mb-6 flex items-center gap-4">
+        <div class="relative w-16 h-16">
+          <svg class="w-16 h-16 transform -rotate-90">
+            <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.1)" stroke-width="4" fill="none"/>
+            <circle id="progress-circle" cx="32" cy="32" r="28" stroke="white" stroke-width="4" fill="none"
+              stroke-dasharray="175.93" stroke-dashoffset="175.93" class="progress-ring" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="progress-percent" class="text-sm font-bold">0%</span>
+          </div>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm opacity-70">Прогресс дня</p>
+          <p class="text-xs opacity-50" id="tasks-completed">0 из 12 задач</p>
+        </div>
+      </div>
+      <!-- Prayers Section -->
+      <div class="mb-6">
+        <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
+          <i class="fas fa-mosque"></i> НАМАЗЫ
+        </h3>
+        <div class="space-y-2">
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center" onclick="togglePrayer('fajr', this)">
+            <span class="text-base font-medium">Фаджр</span>
+            <div class="toggle-circle"><i class="fas fa-check text-xs"></i></div>
+          </div>
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center" onclick="togglePrayer('zuhr', this)">
+            <span class="text-base font-medium">Зухр</span>
+            <div class="toggle-circle"><i class="fas fa-check text-xs"></i></div>
+          </div>
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center" onclick="togglePrayer('asr', this)">
+            <span class="text-base font-medium">Аср</span>
+            <div class="toggle-circle"><i class="fas fa-check text-xs"></i></div>
+          </div>
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center" onclick="togglePrayer('maghrib', this)">
+            <span class="text-base font-medium">Магриб</span>
+            <div class="toggle-circle"><i class="fas fa-check text-xs"></i></div>
+          </div>
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center" onclick="togglePrayer('isha', this)">
+            <span class="text-base font-medium">Иша</span>
+            <div class="toggle-circle"><i class="fas fa-check text-xs"></i></div>
+          </div>
+        </div>
+      </div>
+      <!-- Azkar Section -->
+      <div class="mb-6">
+        <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
+          <i class="fas fa-hands-praying"></i> АЗКАРЫ
+        </h3>
+        <div class="glass-panel rounded-xl p-4">
+          <div class="flex justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="toggleAzkar('morning', this)">
+              <div class="custom-checkbox" id="azkar-morning"><i class="fas fa-check"></i></div>
+              <span class="text-sm">Утро</span>
+            </div>
+            <div class="flex items-center gap-3 cursor-pointer" onclick="toggleAzkar('evening', this)">
+              <div class="custom-checkbox" id="azkar-evening"><i class="fas fa-check"></i></div>
+              <span class="text-sm">Вечер</span>
+            </div>
+            <div class="flex items-center gap-3 cursor-pointer" onclick="toggleAzkar('night', this)">
+              <div class="custom-checkbox" id="azkar-night"><i class="fas fa-check"></i></div>
+              <span class="text-sm">Ночь</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Counters Section -->
+      <div class="mb-6">
+        <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
+          <i class="fas fa-book-open"></i> ЧТЕНИЕ
+        </h3>
+        <div class="space-y-2">
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center">
+            <span class="text-base font-medium w-20">Коран</span>
+            <div class="flex items-center gap-3">
+              <div class="counter-btn" onclick="updateCounter('quran', -1)">−</div>
+              <span id="quran-count" class="text-base font-mono w-20 text-center">000 стр.</span>
+              <div class="counter-btn" onclick="updateCounter('quran', 1)">+</div>
+            </div>
+          </div>
+          <div class="glass-item rounded-xl p-3 flex justify-between items-center">
+            <span class="text-base font-medium w-20">Книга</span>
+            <div class="flex items-center gap-3">
+              <div class="counter-btn" onclick="updateCounter('book', -1)">−</div>
+              <span id="book-count" class="text-base font-mono w-20 text-center">000 стр.</span>
+              <div class="counter-btn" onclick="updateCounter('book', 1)">+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Workout Section -->
+      <div class="mb-6">
+        <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
+          <i class="fas fa-dumbbell"></i> ТРЕНИРОВКА
+        </h3>
+        <div class="glass-item rounded-xl p-3 flex justify-between items-center">
+          <span class="text-base font-medium w-32">Время</span>
+          <div class="flex items-center gap-3">
+            <div class="counter-btn" onclick="updateCounter('workout', -1)">−</div>
+            <span id="workout-count" class="text-base font-mono w-24 text-center">000 мин.</span>
+            <div class="counter-btn" onclick="updateCounter('workout', 1)">+</div>
+          </div>
+        </div>
+      </div>
+      <!-- Goals/Tasks Section -->
+      <div class="mb-6">
+        <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
+          <i class="fas fa-bullseye"></i> ЦЕЛИ ДНЯ
+        </h3>
+        <div id="goals-list" class="space-y-2">
+          <!-- Dynamic goals will be added here -->
+        </div>
+        <button onclick="addGoal()" class="w-full glass-panel rounded-xl p-3 mt-2 text-sm opacity-60 flex items-center justify-center gap-2 active:opacity-80">
+          <i class="fas fa-plus"></i> Добавить цель
+        </button>
+      </div>
+    </div>
+    <!-- Stats View -->
+    <div id="stats-content" class="hidden flex-1 overflow-y-auto px-4 pb-28 fade-in">
+      <div class="flex justify-between items-center mb-6 pt-2">
+        <div class="flex items-center gap-3">
+          <i class="fas fa-arrow-left text-xl cursor-pointer" onclick="switchView('main')"></i>
+          <h1 class="text-xl font-medium">Статистика</h1>
+        </div>
+        <i class="far fa-calendar-alt text-xl"></i>
+      </div>
+      <!-- Date Selector -->
+      <div class="glass-panel rounded-2xl p-4 mb-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-xs opacity-50 mb-1">Статистика за</p>
+            <p class="text-lg font-bold" id="stats-date">24 Февраля 2026</p>
+          </div>
+          <button onclick="setStatsToToday()" class="bg-white text-black px-5 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-transform flex items-center gap-2">
+            <i class="fas fa-calendar-day"></i>
+            Сегодня
+          </button>
+        </div>
+      </div>
+      <!-- Stats Tabs -->
+      <div class="tab-selector">
+        <div class="tab-btn active" onclick="switchStatsTab('daily')">День</div>
+        <div class="tab-btn" onclick="switchStatsTab('monthly')">Месяц</div>
+        <div class="tab-btn" onclick="switchStatsTab('yearly')">Год</div>
+      </div>
+      <!-- Daily Stats Tab -->
+      <div id="daily-stats" class="stats-tab active">
+        <!-- Overall Stats -->
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-pie"></i> ОБЩАЯ СТАТИСТИКА
+          </h3>
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p class="text-2xl font-bold" id="stat-total-days">1</p>
+              <p class="text-xs opacity-50">Дней</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="stat-perfect-days">1</p>
+              <p class="text-xs opacity-50">Идеальных</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="stat-perfect-percent">100%</p>
+              <p class="text-xs opacity-50">Успех</p>
+            </div>
+          </div>
+        </div>
+        <!-- Prayer Stats -->
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
+            <i class="fas fa-mosque"></i> НАМАЗЫ
+          </h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm opacity-70">Фаджр</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono" id="stat-fajr">1</span>
+                <div class="status-indicator" id="indicator-fajr"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm opacity-70">Зухр</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono" id="stat-zuhr">1</span>
+                <div class="status-indicator" id="indicator-zuhr"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm opacity-70">Аср</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono" id="stat-asr">1</span>
+                <div class="status-indicator" id="indicator-asr"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm opacity-70">Магриб</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono" id="stat-maghrib">1</span>
+                <div class="status-indicator" id="indicator-maghrib"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm opacity-70">Иша</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono" id="stat-isha">1</span>
+                <div class="status-indicator" id="indicator-isha"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Reading Stats -->
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
+            <i class="fas fa-book"></i> ЧТЕНИЕ
+          </h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Коран (страниц)</span>
+              <span class="font-mono" id="stat-quran">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Книги (страниц)</span>
+              <span class="font-mono" id="stat-book">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Дней с чтением</span>
+              <span class="font-mono" id="stat-reading-days">1</span>
+            </div>
+          </div>
+        </div>
+        <!-- Workout Stats -->
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
+            <i class="fas fa-dumbbell"></i> ТРЕНИРОВКИ
+          </h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Всего тренировок</span>
+              <span class="font-mono" id="stat-workout-count">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Всего минут</span>
+              <span class="font-mono" id="stat-workout-mins">10</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Среднее в день</span>
+="font-mono" id="stat-workout-avg">10 мин.</span>
+            </div>
+          </div>
+        </div>
+        <!-- Azkar Stats -->
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
+            <i class="fas fa-hands-praying"></i> АЗКАРЫ
+          </h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Утро</span>
+              <span class="font-mono" id="stat-azkar-morning">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Вечер</span>
+              <span class="font-mono" id="stat-azkar-evening">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Ночь</span>
+              <span class="font-mono" id="stat-azkar-night">1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Monthly Stats Tab -->
+      <div id="monthly-stats" class="stats-tab">
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Статистика за месяц</h3>
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p class="text-2xl font-bold" id="month-total-days">1</p>
+              <p class="text-xs opacity-50">Дней</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="month-perfect-days">1</p>
+              <p class="text-xs opacity-50">Идеальных</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="month-perfect-percent">100%</p>
+              <p class="text-xs opacity-50">Успех</p>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Намазы за месяц</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Фаджр</span>
+              <span class="font-mono" id="month-fajr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Зухр</span>
+              <span class="font-mono" id="month-zuhr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Аср</span>
+              <span class="font-mono" id="month-asr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Магриб</span>
+              <span class="font-mono" id="month-maghrib">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Иша</span>
+              <span class="font-mono" id="month-isha">1</span>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Чтение за месяц</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Коран (страниц)</span>
+              <span class="font-mono" id="month-quran">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Книги (страниц)</span>
+              <span class="font-mono" id="month-book">1</span>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Тренировки за месяц</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Всего минут</span>
+              <span class="font-mono" id="month-workout-mins">10</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Среднее в день</span>
+              <span class="font-mono" id="month-workout-avg">10 мин.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Yearly Stats Tab -->
+      <div id="yearly-stats" class="stats-tab">
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Статистика за год</h3>
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p class="text-2xl font-bold" id="year-total-days">1</p>
+              <p class="text-xs opacity-50">Дней</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="year-perfect-days">1</p>
+              <p class="text-xs opacity-50">Идеальных</p>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="year-perfect-percent">100%</p>
+              <p class="text-xs opacity-50">Успех</p>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Намазы за год</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Фаджр</span>
+              <span class="font-mono" id="year-fajr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Зухр</span>
+              <span class="font-mono" id="year-zuhr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Аср</span>
+              <span class="font-mono" id="year-asr">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Магриб</span>
+              <span class="font-mono" id="year-maghrib">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Иша</span>
+              <span class="font-mono" id="year-isha">1</span>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5 mb-4">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Чтение за год</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Коран (страниц)</span>
+              <span class="font-mono" id="year-quran">1</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Книги (страниц)</span>
+              <span class="font-mono" id="year-book">1</span>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel rounded-2xl p-5">
+          <h3 class="text-sm font-bold opacity-80 mb-4">Тренировки за год</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Всего минут</span>
+              <span class="font-mono" id="year-workout-mins">10</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm opacity-70">Среднее в день</span>
+              <span class="font-mono" id="year-workout-avg">10 мин.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Notes View -->
+    <div id="notes-content" class="hidden flex-1 overflow-y-auto px-4 pb-28 fade-in">
+      <div class="flex justify-between items-center mb-6 pt-2">
+        <h1 class="text-xl font-medium">Заметки</h1>
+        <button onclick="openNoteModal()" class="bg-white text-black px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform flex items-center gap-2">
+          <i class="fas fa-plus"></i>
+          Новая
+        </button>
+      </div>
+      <div id="notes-list" class="space-y-3">
+        <!-- Notes will be dynamically added here -->
+      </div>
+      <div id="empty-notes" class="text-center py-12 opacity-50">
+        <i class="fas fa-sticky-note text-4xl mb-4"></i>
+        <p>Нет заметок</p>
+        <p class="text-xs mt-2">Нажмите "+" чтобы создать</p>
+      </div>
+    </div>
+    <!-- Bottom Navigation -->
+    <div class="absolute bottom-0 w-full glass-panel rounded-t-3xl p-3 pb-5 flex justify-around items-center z-20">
+      <!-- Notes Button -->
+      <div class="nav-item" onclick="switchView('notes')" id="nav-notes">
+        <i class="fas fa-sticky-note"></i>
+        <span>Заметки</span>
+      </div>
+      <!-- Category Status Indicators -->
+      <div class="flex gap-2 px-4">
+        <div class="status-indicator" id="status-namaz" title="Намаз"></div>
+        <div class="status-indicator" id="status-azkar" title="Азкар"></div>
+        <div class="status-indicator" id="status-quran" title="Коран"></div>
+        <div class="status-indicator" id="status-book" title="Книга"></div>
+        <div class="status-indicator" id="status-workout" title="Тренировка"></div>
+      </div>
+      <!-- Stats Button -->
+      <div class="nav-item" onclick="switchView('stats')" id="nav-stats">
+        <i class="fas fa-chart-bar"></i>
+        <span>Стат</span>
+      </div>
+    </div>
+  </div>
+  <!-- Notes Modal -->
+  <div class="modal-overlay" id="note-modal" onclick="closeNoteModal(event)">
+    <div class="modal-content">
+      <div class="p-5 border-b border-white/10">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-bold">Новая заметка</h3>
+          <button onclick="closeNoteModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:scale-90">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-5 flex-1 overflow-y-auto">
+        <input type="text" id="note-title" class="custom-input mb-3" placeholder="Заголовок">
+        <textarea id="note-content" class="custom-input" placeholder="Текст заметки..."></textarea>
+        <!-- Note Color Selection -->
+        <div class="mt-4">
+          <p class="text-xs opacity-50 mb-2">Цвет заметки</p>
+          <div class="flex gap-2">
+            <button class="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 color-btn active" data-color="default" onclick="selectNoteColor(this)"></button>
+            <button class="w-8 h-8 rounded-full bg-amber-600/60 border-2 border-transparent color-btn" data-color="amber" onclick="selectNoteColor(this)"></button>
+            <button class="w-8 h-8 rounded-full bg-blue-600/60 border-2 border-transparent color-btn" data-color="blue" onclick="selectNoteColor(this)"></button>
+            <button class="w-8 h-8 rounded-full bg-green-600/60 border-2 border-transparent color-btn" data-color="green" onclick="selectNoteColor(this)"></button>
+            <button class="w-8 h-8 rounded-full bg-red-600/60 border-2 border-transparent color-btn" data-color="red" onclick="selectNoteColor(this)"></button>
+          </div>
+        </div>
+      </div>
+      <div class="p-5 border-t border-white/10">
+        <button onclick="saveNote()" class="w-full bg-white text-black py-3 rounded-xl font-bold active:scale-98 transition-transform">
+          Сохранить
+        </button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Initialize Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.setHeaderColor('#000000');
+    }
+    
+    // Haptic Feedback
+    function haptic(style = 'light') {
+      if (navigator.vibrate) {
+        const patterns = {
+          light: 10,
+          medium: 20,
+          heavy: 40,
+          success: [10, 30, 10],
+          perfect: [10, 30, 10, 30, 10]
+        };
+        navigator.vibrate(patterns[style] || patterns.light);
+      }
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        const tgPatterns = {
+          light: 'light',
+          medium: 'medium',
+          heavy: 'heavy',
+          success: 'success',
+          perfect: 'success'
+        };
+        window.Telegram.WebApp.HapticFeedback.impactOccurred(tgPatterns[style] || 'light');
+      }
+    }
+
+    // State Management
+    const state = {
+      currentDate: new Date(),
+      statsDate: new Date(),
+      streak: 1,
+      prayers: { fajr: false, zuhr: false, asr: false, maghrib: false, isha: false },
+      azkar: { morning: false, evening: false, night: false },
+      counters: { quran: 0, book: 0, workout: 0 },
+      goals: [],
+      notes: [],
+      history: {} // Store daily stats by date
+    };
+
+    // Background Images Array - YOUR IMAGES
+    const bgImages = [
+      "https://i.imgur.com/d0mbjd7.jpg",
+      "https://i.imgur.com/HWaBbn1.jpg",
+      "https://i.imgur.com/wchlK1r.jpg",
+      "https://i.imgur.com/NDftvos.jpg",
+      "https://i.imgur.com/HURwLMr.jpg"
+    ];
+
+    function setRandomBackground() {
+      const randomIndex = Math.floor(Math.random() * bgImages.length);
+      const bgElement = document.getElementById('app-bg');
+      bgElement.style.backgroundImage = `url('${bgImages[randomIndex]}')`;
+    }
+
+    // Load from localStorage
+    function loadState() {
+      const saved = localStorage.getItem('nafsControlState');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const lastDate = parsed.lastDate;
+        const today = new Date().toDateString();
+        
+        // Save previous day's stats before loading new state
+        if (lastDate && lastDate !== today && parsed.completedToday) {
+          saveDailyHistory(lastDate, parsed);
+        }
+        
+        if (lastDate !== today) {
+          if (parsed.completedToday) {
+            state.streak = (parsed.streak || 0) + 1;
+          } else {
+            state.streak = 1;
+          }
+          state.prayers = { fajr: false, zuhr: false, asr: false, maghrib: false, isha: false };
+          state.azkar = { morning: false, evening: false, night: false };
+          state.counters = { quran: 0, book: 0, workout: 0 };
+          state.goals = [];
+        } else {
+          state.prayers = parsed.prayers || state.prayers;
+          state.azkar = parsed.azkar || state.azkar;
+          state.counters = parsed.counters || state.counters;
+          state.goals = parsed.goals || [];
+          state.streak = parsed.streak || 1;
+        }
+        state.notes = parsed.notes || [];
+        state.history = parsed.history || {};
+      }
+      state.currentDate = new Date();
+      state.statsDate = new Date();
+    }
+
+    function saveDailyHistory(dateStr, data) {
+      state.history[dateStr] = {
+        streak: data.streak || 1,
+        completedToday: data.completedToday || false,
+        prayers: data.prayers || state.prayers,
+        azkar: data.azkar || state.azkar,
+        counters: data.counters || state.counters,
+        goals: data.goals || []
+      };
+    }
+
+    function saveState() {
+      const data = {
+        lastDate: new Date().toDateString(),
+        completedToday: isDayComplete(),
+        streak: state.streak,
+        prayers: state.prayers,
+        azkar: state.azkar,
+        counters: state.counters,
+        goals: state.goals,
+        notes: state.notes,
+        history: state.history
+      };
+      localStorage.setItem('nafsControlState', JSON.stringify(data));
+    }
+
+    function isDayComplete() {
+      const allPrayers = Object.values(state.prayers).every(v => v);
+      const allAzkar = Object.values(state.azkar).every(v => v);
+      return allPrayers && allAzkar;
+    }
+
+    function initDateDisplay() {
+      const now = new Date();
+      const options = { weekday: 'long' };
+      const dateOptions = { day: 'numeric', month: 'long' };
+      document.getElementById('day-name').textContent = now.toLocaleDateString('ru-RU', options);
+      document.getElementById('current-date').textContent = now.toLocaleDateString('ru-RU', dateOptions);
+      document.getElementById('streak-count').textContent = state.streak;
+      updateStatsDate();
+    }
+
+    function updateStatsDate() {
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      document.getElementById('stats-date').textContent = state.statsDate.toLocaleDateString('ru-RU', options);
+    }
+
+    function setStatsToToday() {
+      haptic('success');
+      state.statsDate = new Date();
+      updateStatsDate();
+      updateStatsDisplay();
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clock').innerText = `${hours}:${minutes}`;
+    }
+
+    setInterval(updateClock, 1000);
+
+    function togglePrayer(prayer, element) {
+      haptic('light');
+      state.prayers[prayer] = !state.prayers[prayer];
+      const circle = element.querySelector('.toggle-circle');
+      if (state.prayers[prayer]) {
+        circle.classList.add('active');
+      } else {
+        circle.classList.remove('active');
+      }
+      updateProgress();
+      updateStatusIndicators();
+      saveState();
+      
+      // Check for perfect day
+      if (isDayComplete()) {
+        haptic('perfect');
+      }
+    }
+
+    function toggleAzkar(time, element) {
+      haptic('light');
+      state.azkar[time] = !state.azkar[time];
+      const checkbox = element.querySelector('.custom-checkbox');
+      if (state.azkar[time]) {
+        checkbox.classList.add('checked');
+      } else {
+        checkbox.classList.remove('checked');
+      }
+      updateProgress();
+      updateStatusIndicators();
+      saveState();
+      
+      // Check for perfect day
+      if (isDayComplete()) {
+        haptic('perfect');
+      }
+    }
+
+    function updateCounter(type, delta) {
+      haptic('light');
+      state.counters[type] += delta;
+      if (state.counters[type] < 0) state.counters[type] = 0;
+      const formatted = String(state.counters[type]).padStart(3, '0');
+      const suffix = type === 'workout' ? ' мин.' : ' стр.';
+      document.getElementById(`${type}-count`).innerText = `${formatted}${suffix}`;
+      updateProgress();
+      updateStatusIndicators();
+      saveState();
+    }
+
+    function updateProgress() {
+      const totalTasks = 12;
+      let completedTasks = 0;
+      completedTasks += Object.values(state.prayers).filter(v => v).length;
+      completedTasks += Object.values(state.azkar).filter(v => v).length;
+      if (state.counters.quran > 0) completedTasks++;
+      if (state.counters.book > 0) completedTasks++;
+      if (state.counters.workout > 0) completedTasks++;
+      completedTasks += state.goals.filter(g => g.completed).length;
+
+      const percent = Math.round((completedTasks / totalTasks) * 100);
+      const circumference = 2 * Math.PI * 28;
+      const offset = circumference - (percent / 100) * circumference;
+      document.getElementById('progress-circle').style.strokeDashoffset = offset;
+      document.getElementById('progress-percent').textContent = `${percent}%`;
+      document.getElementById('tasks-completed').textContent = `${completedTasks} из ${totalTasks} задач`;
+    }
+
+    function updateStatusIndicators() {
+      const namazComplete = Object.values(state.prayers).every(v => v);
+      document.getElementById('status-namaz').classList.toggle('completed', namazComplete);
+      
+      const azkarComplete = Object.values(state.azkar).every(v => v);
+      document.getElementById('status-azkar').classList.toggle('completed', azkarComplete);
+      
+      document.getElementById('status-quran').classList.toggle('completed', state.counters.quran > 0);
+      document.getElementById('status-book').classList.toggle('completed', state.counters.book > 0);
+      document.getElementById('status-workout').classList.toggle('completed', state.counters.workout > 0);
+    }
+
+    function addGoal() {
+      haptic('medium');
+      const goalText = prompt('Введите цель:');
+      if (goalText && goalText.trim()) {
+        state.goals.push({
+          id: Date.now(),
+          text: goalText.trim(),
+          completed: false
+        });
+        renderGoals();
+        updateProgress();
+        saveState();
+      }
+    }
+
+    function toggleGoal(id) {
+      haptic('light');
+      const goal = state.goals.find(g => g.id === id);
+      if (goal) {
+        goal.completed = !goal.completed;
+        renderGoals();
+        updateProgress();
+        saveState();
+      }
+    }
+
+    function deleteGoal(id) {
+      haptic('light');
+      state.goals = state.goals.filter(g => g.id !== id);
+      renderGoals();
+      updateProgress();
+      saveState();
+    }
+
+    function renderGoals() {
+      const container = document.getElementById('goals-list');
+      if (state.goals.length === 0) {
+        container.innerHTML = '<p class="text-xs opacity-40 text-center py-4">Нет активных целей</p>';
+        return;
+      }
+      container.innerHTML = state.goals.map(goal => `
+        <div class="glass-item rounded-xl p-3 flex justify-between items-center ${goal.completed ? 'opacity-50' : ''}">
+          <div class="flex items-center gap-3 flex-1" onclick="toggleGoal(${goal.id})">
+            <div class="custom-checkbox ${goal.completed ? 'checked' : ''}">
+              <i class="fas fa-check"></i>
+            </div>
+            <span class="text-sm ${goal.completed ? 'line-through' : ''}">${goal.text}</span>
+          </div>
+          <button onclick="deleteGoal(${goal.id})" class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
+            <i class="fas fa-trash text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    let selectedNoteColor = 'default';
+
+    function openNoteModal() {
+      haptic('medium');
+      document.getElementById('note-modal').classList.add('active');
+      document.getElementById('note-title').value = '';
+      document.getElementById('note-content').value = '';
+      selectedNoteColor = 'default';
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.classList.toggle('border-white/40', btn.dataset.color === 'default');
+        btn.classList.toggle('border-transparent', btn.dataset.color !== 'default');
+      });
+    }
+
+    function closeNoteModal(event) {
+      if (!event || event.target === document.getElementById('note-modal')) {
+        document.getElementById('note-modal').classList.remove('active');
+      }
+    }
+
+    function selectNoteColor(btn) {
+      haptic('light');
+      selectedNoteColor = btn.dataset.color;
+      document.querySelectorAll('.color-btn').forEach(b => {
+        b.classList.toggle('border-white/40', b === btn);
+        b.classList.toggle('border-transparent', b !== btn);
+      });
+    }
+
+    function saveNote() {
+      const title = document.getElementById('note-title').value.trim();
+      const content = document.getElementById('note-content').value.trim();
+      if (!title && !content) {
+        haptic('light');
+        return;
+      }
+      haptic('success');
+      state.notes.unshift({
+        id: Date.now(),
+        title,
+        content,
+        color: selectedNoteColor,
+        createdAt: new Date().toISOString()
+      });
+      document.getElementById('note-modal').classList.remove('active');
+      renderNotes();
+      saveState();
+    }
+
+    function deleteNote(id) {
+      haptic('light');
+      state.notes = state.notes.filter(n => n.id !== id);
+      renderNotes();
+      saveState();
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notes-list');
+      const empty = document.getElementById('empty-notes');
+      if (state.notes.length === 0) {
+        container.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      const colorClasses = {
+        default: 'bg-white/5',
+        amber: 'bg-amber-600/30',
+        blue: 'bg-blue-600/30',
+        green: 'bg-green-600/30',
+        red: 'bg-red-600/30'
+      };
+      container.innerHTML = state.notes.map(note => `
+        <div class="${colorClasses[note.color]} rounded-xl p-4 note-item">
+          <div class="flex justify-between items-start mb-2">
+            <h4 class="font-bold text-sm">${note.title || 'Без названия'}</h4>
+            <button onclick="deleteNote(${note.id})" class="text-xs opacity-50 hover:opacity-100">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          <p class="text-xs opacity-70 whitespace-pre-wrap">${note.content}</p>
+          <p class="text-[10px] opacity-40 mt-3">${new Date(note.createdAt).toLocaleDateString('ru-RU')}</p>
+        </div>
+      `).join('');
+    }
+
+    function calculateMonthlyStats() {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      let totalDays = 0;
+      let perfectDays = 0;
+      let fajrCount = 0, zuhrCount = 0, asrCount = 0, maghribCount = 0, ishaCount = 0;
+      let quranPages = 0, bookPages = 0, workoutMins = 0;
+      
+      for (const dateStr in state.history) {
+        const date = new Date(dateStr);
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          totalDays++;
+          const dayData = state.history[dateStr];
+          
+          if (dayData.completedToday) perfectDays++;
+          
+          if (dayData.prayers.fajr) fajrCount++;
+          if (dayData.prayers.zuhr) zuhrCount++;
+          if (dayData.prayers.asr) asrCount++;
+          if (dayData.prayers.maghrib) maghribCount++;
+          if (dayData.prayers.isha) ishaCount++;
+          
+          quranPages += dayData.counters.quran;
+          bookPages += dayData.counters.book;
+          workoutMins += dayData.counters.workout;
+        }
+      }
+      
+      const perfectPercent = totalDays > 0 ? Math.round((perfectDays / totalDays) * 100) : 0;
+      
+      document.getElementById('month-total-days').textContent = totalDays;
+      document.getElementById('month-perfect-days').textContent = perfectDays;
+      document.getElementById('month-perfect-percent').textContent = `${perfectPercent}%`;
+      document.getElementById('month-fajr').textContent = fajrCount;
+      document.getElementById('month-zuhr').textContent = zuhrCount;
+      document.getElementById('month-asr').textContent = asrCount;
+      document.getElementById('month-maghrib').textContent = maghribCount;
+      document.getElementById('month-isha').textContent = ishaCount;
+      document.getElementById('month-quran').textContent = quranPages;
+      document.getElementById('month-book').textContent = bookPages;
+      document.getElementById('month-workout-mins').textContent = workoutMins;
+      document.getElementById('month-workout-avg').textContent = totalDays > 0 ? `${Math.round(workoutMins / totalDays)} мин.` : '0 мин.';
+    }
+
+    function calculateYearlyStats() {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      
+      let totalDays = 0;
+      let perfectDays = 0;
+      let fajrCount = 0, zuhrCount = 0, asrCount = 0, maghribCount = 0, ishaCount = 0;
+      let quranPages = 0, bookPages = 0, workoutMins = 0;
+      
+      for (const dateStr in state.history) {
+        const date = new Date(dateStr);
+        if (date.getFullYear() === currentYear) {
+          totalDays++;
+          const dayData = state.history[dateStr];
+          
+          if (dayData.completedToday) perfectDays++;
+          
+          if (dayData.prayers.fajr) fajrCount++;
+          if (dayData.prayers.zuhr) zuhrCount++;
+          if (dayData.prayers.asr) asrCount++;
+          if (dayData.prayers.maghrib) maghribCount++;
+          if (dayData.prayers.isha) ishaCount++;
+          
+          quranPages += dayData.counters.quran;
+          bookPages += dayData.counters.book;
+          workoutMins += dayData.counters.workout;
+        }
+      }
+      
+      const perfectPercent = totalDays > 0 ? Math.round((perfectDays / totalDays) * 100) : 0;
+      
+      document.getElementById('year-total-days').textContent = totalDays;
+      document.getElementById('year-perfect-days').textContent = perfectDays;
+      document.getElementById('year-perfect-percent').textContent = `${perfectPercent}%`;
+      document.getElementById('year-fajr').textContent = fajrCount;
+      document.getElementById('year-zuhr').textContent = zuhrCount;
+      document.getElementById('year-asr').textContent = asrCount;
+      document.getElementById('year-maghrib').textContent = maghribCount;
+      document.getElementById('year-isha').textContent = ishaCount;
+      document.getElementById('year-quran').textContent = quranPages;
+      document.getElementById('year-book').textContent = bookPages;
+      document.getElementById('year-workout-mins').textContent = workoutMins;
+      document.getElementById('year-workout-avg').textContent = totalDays > 0 ? `${Math.round(workoutMins / totalDays)} мин.` : '0 мин.';
+    }
+
+    function updateStatsDisplay() {
+      // Daily stats
+      document.getElementById('stat-total-days').textContent = state.streak;
+      document.getElementById('stat-perfect-days').textContent = isDayComplete() ? state.streak : state.streak - 1;
+      document.getElementById('stat-perfect-percent').textContent = isDayComplete() ? '100%' : `${Math.round(((state.streak - 1) / state.streak) * 100)}%`;
+      
+      document.getElementById('stat-fajr').textContent = state.prayers.fajr ? '1' : '0';
+      document.getElementById('stat-zuhr').textContent = state.prayers.zuhr ? '1' : '0';
+      document.getElementById('stat-asr').textContent = state.prayers.asr ? '1' : '0';
+      document.getElementById('stat-maghrib').textContent = state.prayers.maghrib ? '1' : '0';
+      document.getElementById('stat-isha').textContent = state.prayers.isha ? '1' : '0';
+      
+      document.getElementById('indicator-fajr').classList.toggle('completed', state.prayers.fajr);
+      document.getElementById('indicator-zuhr').classList.toggle('completed', state.prayers.zuhr);
+      document.getElementById('indicator-asr').classList.toggle('completed', state.prayers.asr);
+      document.getElementById('indicator-maghrib').classList.toggle('completed', state.prayers.maghrib);
+      document.getElementById('indicator-isha').classList.toggle('completed', state.prayers.isha);
+      
+      document.getElementById('stat-quran').textContent = state.counters.quran;
+      document.getElementById('stat-book').textContent = state.counters.book;
+      document.getElementById('stat-reading-days').textContent = (state.counters.quran > 0 || state.counters.book > 0) ? state.streak : 0;
+      
+      document.getElementById('stat-workout-count').textContent = state.counters.workout > 0 ? '1' : '0';
+      document.getElementById('stat-workout-mins').textContent = state.counters.workout;
+      document.getElementById('stat-workout-avg').textContent = `${state.counters.workout} мин.`;
+      
+      document.getElementById('stat-azkar-morning').textContent = state.azkar.morning ? '1' : '0';
+      document.getElementById('stat-azkar-evening').textContent = state.azkar.evening ? '1' : '0';
+      document.getElementById('stat-azkar-night').textContent = state.azkar.night ? '1' : '0';
+      
+      // Calculate monthly and yearly stats
+      calculateMonthlyStats();
+      calculateYearlyStats();
+    }
+
+    function switchStatsTab(tabName) {
+      haptic('medium');
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.stats-tab').forEach(tab => tab.classList.remove('active'));
+      
+      document.querySelector(`.tab-btn[onclick="switchStatsTab('${tabName}')"]`).classList.add('active');
+      document.getElementById(`${tabName}-stats`).classList.add('active');
+    }
+
+    function switchView(viewName) {
+      haptic('medium');
+      const main = document.getElementById('main-content');
+      const stats = document.getElementById('stats-content');
+      const notes = document.getElementById('notes-content');
+      
+      const navNotes = document.getElementById('nav-notes');
+      const navStats = document.getElementById('nav-stats');
+      
+      main.classList.add('hidden');
+      stats.classList.add('hidden');
+      notes.classList.add('hidden');
+      
+      navNotes.classList.remove('active');
+      navStats.classList.remove('active');
+      
+      if (viewName === 'main') {
+        main.classList.remove('hidden');
+      } else if (viewName === 'stats') {
+        stats.classList.remove('hidden');
+        navStats.classList.add('active');
+        updateStatsDisplay();
+      } else if (viewName === 'notes') {
+        notes.classList.remove('hidden');
+        navNotes.classList.add('active');
+      }
+    }
+
+    function init() {
+      setRandomBackground();
+      loadState();
+      initDateDisplay();
+      
+      document.getElementById('quran-count').textContent = `${String(state.counters.quran).padStart(3, '0')} стр.`;
+      document.getElementById('book-count').textContent = `${String(state.counters.book).padStart(3, '0')} стр.`;
+      document.getElementById('workout-count').textContent = `${String(state.counters.workout).padStart(3, '0')} мин.`;
+      
+      // Update prayer toggles based on state
+      const prayerElements = document.querySelectorAll('[onclick^="togglePrayer"]');
+      prayerElements.forEach(el => {
+        const prayer = el.getAttribute('onclick').match(/'(\w+)'/)[1];
+        const circle = el.querySelector('.toggle-circle');
+        if (state.prayers[prayer]) {
+          circle.classList.add('active');
+        }
+      });
+      
+      // Update azkar checkboxes based on state
+      ['morning', 'evening', 'night'].forEach(time => {
+        const checkbox = document.getElementById(`azkar-${time}`);
+        if (state.azkar[time]) {
+          checkbox.classList.add('checked');
+        }
+      });
+      
+      renderGoals();
+      renderNotes();
+      updateProgress();
+      updateStatusIndicators();
+      updateClock();
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
