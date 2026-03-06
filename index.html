@@ -80,6 +80,7 @@
       transition: all 0.2s ease;
       font-size: 1.3rem;
       flex-shrink: 0;
+      -webkit-touch-callout: none;
     }
     .counter-btn:active {
       background: rgba(255, 255, 255, 0.2);
@@ -96,6 +97,7 @@
       transition: all 0.3s ease;
       padding: 8px 12px;
       border-radius: 12px;
+      -webkit-tap-highlight-color: transparent;
     }
     .nav-item:active {
       transform: scale(0.9);
@@ -127,7 +129,7 @@
       height: 100%;
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(8px);
-      z-index: 100;
+      z-index: 1000;
       display: flex;
       align-items: flex-end;
       opacity: 0;
@@ -246,6 +248,7 @@
       font-size: 0.8rem;
       cursor: pointer;
       transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
     .tab-btn.active {
       background: rgba(255, 255, 255, 0.2);
@@ -282,6 +285,43 @@
       padding-top: 0.75rem;
       padding-bottom: 0.75rem;
     }
+    
+    /* Улучшение для кнопок на мобильных */
+    button, 
+    [onclick],
+    .nav-item,
+    .tab-btn,
+    .counter-btn,
+    .glass-item,
+    .custom-checkbox,
+    .toggle-circle {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Специально для кнопки сохранения */
+    .save-note-btn {
+      width: 100%;
+      background: white;
+      color: black;
+      padding: 16px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 16px;
+      border: none;
+      outline: none;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      cursor: pointer;
+      -webkit-appearance: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .save-note-btn:active {
+      transform: scale(0.98);
+      background: #f0f0f0;
+    }
   </style>
 </head>
 <body>
@@ -302,7 +342,6 @@
           <p class="text-xs opacity-50" id="day-name">Понедельник</p>
           <h2 class="text-2xl font-bold" id="current-date">24 Февраля</h2>
         </div>
-        <!-- Убран желтый значок-счетчик дней -->
       </div>
       
       <div class="glass-panel rounded-2xl p-4 mb-6 flex items-center gap-4">
@@ -790,9 +829,7 @@
         </div>
       </div>
       <div class="p-5 border-t border-white/10">
-        <button onclick="saveNote()" class="w-full bg-white text-black py-3 rounded-xl font-bold active:scale-98 transition-transform">
-          Сохранить
-        </button>
+        <button class="save-note-btn" onclick="saveNote()">Сохранить</button>
       </div>
     </div>
   </div>
@@ -1113,6 +1150,7 @@
     }
 
     function saveNote() {
+      console.log('saveNote called'); // Для отладки
       const title = document.getElementById('note-title').value.trim();
       const content = document.getElementById('note-content').value.trim();
       if (!title && !content) {
@@ -1366,8 +1404,28 @@
       updateClock();
     }
 
-    init();
+    // Добавляем обработчики касаний для мобильных устройств
+    document.addEventListener('DOMContentLoaded', function() {
+      init();
+      
+      // Улучшенная обработка для кнопки сохранения
+      const saveBtn = document.querySelector('.save-note-btn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveNote();
+          return false;
+        });
+        
+        saveBtn.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveNote();
+          return false;
+        }, { passive: false });
+      }
+    });
   </script>
 </body>
 </html>
-
