@@ -803,36 +803,37 @@
     </div>
   </div>
 
-  <!-- Note Modal -->
-  <div class="modal-overlay" id="note-modal" onclick="closeNoteModal(event)">
-    <div class="modal-content">
-      <div class="p-5 border-b border-white/10">
-        <div class="flex justify-between items-center">
-          <h3 class="text-lg font-bold">Новая заметка</h3>
-          <button onclick="closeNoteModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:scale-90">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-      <div class="p-5 flex-1 overflow-y-auto">
-        <input type="text" id="note-title" class="custom-input mb-3" placeholder="Заголовок">
-        <textarea id="note-content" class="custom-input" placeholder="Текст заметки..."></textarea>
-        <div class="mt-4">
-          <p class="text-xs opacity-50 mb-2">Цвет заметки</p>
-          <div class="flex gap-2">
-            <button class="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 color-btn active" data-color="default" onclick="selectNoteColor(this)"></button>
-            <button class="w-8 h-8 rounded-full bg-amber-600/60 border-2 border-transparent color-btn" data-color="amber" onclick="selectNoteColor(this)"></button>
-            <button class="w-8 h-8 rounded-full bg-blue-600/60 border-2 border-transparent color-btn" data-color="blue" onclick="selectNoteColor(this)"></button>
-            <button class="w-8 h-8 rounded-full bg-green-600/60 border-2 border-transparent color-btn" data-color="green" onclick="selectNoteColor(this)"></button>
-            <button class="w-8 h-8 rounded-full bg-red-600/60 border-2 border-transparent color-btn" data-color="red" onclick="selectNoteColor(this)"></button>
-          </div>
-        </div>
-      </div>
-      <div class="p-5 border-t border-white/10">
-        <button class="save-note-btn" onclick="saveNote()">Сохранить</button>
+<!-- Note Modal -->
+<div class="modal-overlay" id="note-modal" onclick="closeNoteModal(event)">
+  <div class="modal-content">
+    <div class="p-5 border-b border-white/10">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold">Новая заметка</h3>
+        <button onclick="closeNoteModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:scale-90">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
     </div>
+    <div class="p-5 flex-1 overflow-y-auto">
+      <input type="text" id="note-title" class="custom-input mb-3" placeholder="Заголовок">
+      <textarea id="note-content" class="custom-input" placeholder="Текст заметки..."></textarea>
+      <div class="mt-4">
+        <p class="text-xs opacity-50 mb-2">Цвет заметки</p>
+        <div class="flex gap-2">
+          <button class="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 color-btn active" data-color="default" onclick="selectNoteColor(this)"></button>
+          <button class="w-8 h-8 rounded-full bg-amber-600/60 border-2 border-transparent color-btn" data-color="amber" onclick="selectNoteColor(this)"></button>
+          <button class="w-8 h-8 rounded-full bg-blue-600/60 border-2 border-transparent color-btn" data-color="blue" onclick="selectNoteColor(this)"></button>
+          <button class="w-8 h-8 rounded-full bg-green-600/60 border-2 border-transparent color-btn" data-color="green" onclick="selectNoteColor(this)"></button>
+          <button class="w-8 h-8 rounded-full bg-red-600/60 border-2 border-transparent color-btn" data-color="red" onclick="selectNoteColor(this)"></button>
+        </div>
+      </div>
+    </div>
+    <div class="p-5 border-t border-white/10">
+      <!-- ИСПРАВЛЕННАЯ КНОПКА -->
+      <button id="save-note-button" style="width: 100%; background: white; color: black; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 16px; border: none; outline: none; cursor: pointer; -webkit-appearance: none; touch-action: manipulation;">Сохранить</button>
+    </div>
   </div>
+</div>
 
   <script>
     if (window.Telegram && window.Telegram.WebApp) {
@@ -1427,5 +1428,52 @@
       }
     });
   </script>
+  <script>
+  // Отдельный обработчик для кнопки сохранения
+  document.addEventListener('DOMContentLoaded', function() {
+    // Находим кнопку сохранения
+    const saveButton = document.getElementById('save-note-button');
+    
+    if (saveButton) {
+      // Функция сохранения заметки
+      function handleSaveNote(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Сохранение заметки...');
+        
+        const title = document.getElementById('note-title').value.trim();
+        const content = document.getElementById('note-content').value.trim();
+        
+        if (!title && !content) {
+          haptic('light');
+          return;
+        }
+        
+        haptic('success');
+        
+        state.notes.unshift({
+          id: Date.now(),
+          title,
+          content,
+          color: selectedNoteColor,
+          createdAt: new Date().toISOString()
+        });
+        
+        document.getElementById('note-modal').classList.remove('active');
+        renderNotes();
+        saveState();
+      }
+      
+      // Добавляем несколько обработчиков для надежности
+      saveButton.addEventListener('click', handleSaveNote);
+      saveButton.addEventListener('touchstart', handleSaveNote, { passive: false });
+      saveButton.addEventListener('mousedown', handleSaveNote);
+      
+      // Убираем атрибут onclick, чтобы не было конфликтов
+      saveButton.removeAttribute('onclick');
+    }
+  });
+</script>
 </body>
 </html>
