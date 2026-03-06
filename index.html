@@ -223,16 +223,6 @@
       opacity: 0;
       transition: opacity 0.2s ease;
     }
-    .streak-badge {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
     .stats-tab {
       display: none;
       flex-direction: column;
@@ -261,6 +251,37 @@
       background: rgba(255, 255, 255, 0.2);
       color: white;
     }
+    .hidden {
+      display: none !important;
+    }
+    .bg-black\/50 {
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .backdrop-blur-lg {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .sticky {
+      position: sticky;
+    }
+    .top-0 {
+      top: 0;
+    }
+    .z-10 {
+      z-index: 10;
+    }
+    .-mx-4 {
+      margin-left: -1rem;
+      margin-right: -1rem;
+    }
+    .px-4 {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .py-3 {
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
   </style>
 </head>
 <body>
@@ -273,17 +294,17 @@
         <i class="fas fa-battery-full"></i>
       </div>
     </div>
+    
+    <!-- Main Content -->
     <div id="main-content" class="flex-1 overflow-y-auto px-4 pb-28 fade-in">
       <div class="flex justify-between items-center mb-4 mt-2">
         <div>
           <p class="text-xs opacity-50" id="day-name">Понедельник</p>
           <h2 class="text-2xl font-bold" id="current-date">24 Февраля</h2>
         </div>
-        <div class="streak-badge">
-          <i class="fas fa-fire"></i>
-          <span id="streak-count">1</span> дней
-        </div>
+        <!-- Убран желтый значок-счетчик дней -->
       </div>
+      
       <div class="glass-panel rounded-2xl p-4 mb-6 flex items-center gap-4">
         <div class="relative w-16 h-16">
           <svg class="w-16 h-16 transform -rotate-90">
@@ -300,6 +321,7 @@
           <p class="text-xs opacity-50" id="tasks-completed">0 из 12 задач</p>
         </div>
       </div>
+      
       <div class="mb-6">
         <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
           <i class="fas fa-mosque"></i> НАМАЗЫ
@@ -327,6 +349,7 @@
           </div>
         </div>
       </div>
+      
       <div class="mb-6">
         <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
           <i class="fas fa-hands-praying"></i> АЗКАРЫ
@@ -348,6 +371,7 @@
           </div>
         </div>
       </div>
+      
       <div class="mb-6">
         <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
           <i class="fas fa-book-open"></i> ЧТЕНИЕ
@@ -371,6 +395,7 @@
           </div>
         </div>
       </div>
+      
       <div class="mb-6">
         <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
           <i class="fas fa-dumbbell"></i> ТРЕНИРОВКА
@@ -378,31 +403,34 @@
         <div class="glass-item rounded-xl p-3 flex justify-between items-center">
           <span class="text-base font-medium w-32">Время</span>
           <div class="flex items-center gap-3">
-            <div class="counter-btn" onclick="updateCounter('workout', -1)">−</div>
+            <div class="counter-btn" onclick="updateCounter('workout', -10)">−10</div>
             <span id="workout-count" class="text-base font-mono w-24 text-center">000 мин.</span>
-            <div class="counter-btn" onclick="updateCounter('workout', 1)">+</div>
+            <div class="counter-btn" onclick="updateCounter('workout', 10)">+10</div>
           </div>
         </div>
       </div>
+      
       <div class="mb-6">
         <h3 class="text-sm font-medium opacity-60 mb-3 flex items-center gap-2">
           <i class="fas fa-bullseye"></i> ЦЕЛИ ДНЯ
         </h3>
-        <div id="goals-list" class="space-y-2">
-        </div>
+        <div id="goals-list" class="space-y-2"></div>
         <button onclick="addGoal()" class="w-full glass-panel rounded-xl p-3 mt-2 text-sm opacity-60 flex items-center justify-center gap-2 active:opacity-80">
           <i class="fas fa-plus"></i> Добавить цель
         </button>
       </div>
     </div>
-    <div id="stats-content" class="hidden flex-1 overflow-y-auto px-4 pb-28 fade-in">
-      <div class="flex justify-between items-center mb-6 pt-2">
+
+    <!-- Stats Content -->
+    <div id="stats-content" class="hidden flex-1 overflow-y-auto px-4 pb-32 fade-in">
+      <div class="flex justify-between items-center mb-6 pt-2 sticky top-0 bg-black/50 backdrop-blur-lg z-10 py-3 -mx-4 px-4">
         <div class="flex items-center gap-3">
-          <i class="fas fa-arrow-left text-xl cursor-pointer" onclick="switchView('main')"></i>
+          <i class="fas fa-arrow-left text-xl cursor-pointer active:scale-90 transition-transform" onclick="switchView('main')"></i>
           <h1 class="text-xl font-medium">Статистика</h1>
         </div>
         <i class="far fa-calendar-alt text-xl"></i>
       </div>
+      
       <div class="glass-panel rounded-2xl p-4 mb-6">
         <div class="flex justify-between items-center">
           <div>
@@ -415,13 +443,15 @@
           </button>
         </div>
       </div>
-      <div class="tab-selector">
+
+      <div class="tab-selector sticky top-[88px] z-10 mb-6">
         <div class="tab-btn active" onclick="switchStatsTab('daily')">День</div>
         <div class="tab-btn" onclick="switchStatsTab('monthly')">Месяц</div>
         <div class="tab-btn" onclick="switchStatsTab('yearly')">Год</div>
       </div>
-      <div id="daily-stats" class="stats-tab active">
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+      <div id="daily-stats" class="stats-tab active space-y-4 pb-4">
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
             <i class="fas fa-chart-pie"></i> ОБЩАЯ СТАТИСТИКА
           </h3>
@@ -440,7 +470,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
             <i class="fas fa-mosque"></i> НАМАЗЫ
           </h3>
@@ -482,7 +513,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
             <i class="fas fa-book"></i> ЧТЕНИЕ
           </h3>
@@ -501,7 +533,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
             <i class="fas fa-dumbbell"></i> ТРЕНИРОВКИ
           </h3>
@@ -520,6 +553,7 @@
             </div>
           </div>
         </div>
+
         <div class="glass-panel rounded-2xl p-5 mb-4">
           <h3 class="text-sm font-bold opacity-80 mb-4 flex items-center gap-2">
             <i class="fas fa-hands-praying"></i> АЗКАРЫ
@@ -540,8 +574,9 @@
           </div>
         </div>
       </div>
-      <div id="monthly-stats" class="stats-tab">
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+      <div id="monthly-stats" class="stats-tab space-y-4 pb-4">
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Статистика за месяц</h3>
           <div class="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -558,7 +593,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Намазы за месяц</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -583,7 +619,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Чтение за месяц</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -596,7 +633,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5">
+
+        <div class="glass-panel rounded-2xl p-5 mb-4">
           <h3 class="text-sm font-bold opacity-80 mb-4">Тренировки за месяц</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -610,8 +648,9 @@
           </div>
         </div>
       </div>
-      <div id="yearly-stats" class="stats-tab">
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+      <div id="yearly-stats" class="stats-tab space-y-4 pb-4">
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Статистика за год</h3>
           <div class="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -628,7 +667,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Намазы за год</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -653,7 +693,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5 mb-4">
+
+        <div class="glass-panel rounded-2xl p-5">
           <h3 class="text-sm font-bold opacity-80 mb-4">Чтение за год</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -666,7 +707,8 @@
             </div>
           </div>
         </div>
-        <div class="glass-panel rounded-2xl p-5">
+
+        <div class="glass-panel rounded-2xl p-5 mb-4">
           <h3 class="text-sm font-bold opacity-80 mb-4">Тренировки за год</h3>
           <div class="space-y-3">
             <div class="flex justify-between">
@@ -681,11 +723,12 @@
         </div>
       </div>
     </div>
-    <!-- Notes View - Added Back Button -->
+
+    <!-- Notes Content -->
     <div id="notes-content" class="hidden flex-1 overflow-y-auto px-4 pb-28 fade-in">
       <div class="flex justify-between items-center mb-6 pt-2">
         <div class="flex items-center gap-3">
-          <i class="fas fa-arrow-left text-xl cursor-pointer" onclick="switchView('main')"></i>
+          <i class="fas fa-arrow-left text-xl cursor-pointer active:scale-90 transition-transform" onclick="switchView('main')"></i>
           <h1 class="text-xl font-medium">Заметки</h1>
         </div>
         <button onclick="openNoteModal()" class="bg-white text-black px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform flex items-center gap-2">
@@ -693,14 +736,15 @@
           Новая
         </button>
       </div>
-      <div id="notes-list" class="space-y-3">
-      </div>
+      <div id="notes-list" class="space-y-3"></div>
       <div id="empty-notes" class="text-center py-12 opacity-50">
         <i class="fas fa-sticky-note text-4xl mb-4"></i>
         <p>Нет заметок</p>
         <p class="text-xs mt-2">Нажмите "+" чтобы создать</p>
       </div>
     </div>
+
+    <!-- Bottom Navigation -->
     <div class="absolute bottom-0 w-full glass-panel rounded-t-3xl p-3 pb-5 flex justify-around items-center z-20">
       <div class="nav-item" onclick="switchView('notes')" id="nav-notes">
         <i class="fas fa-sticky-note"></i>
@@ -719,6 +763,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Note Modal -->
   <div class="modal-overlay" id="note-modal" onclick="closeNoteModal(event)">
     <div class="modal-content">
       <div class="p-5 border-b border-white/10">
@@ -750,6 +796,7 @@
       </div>
     </div>
   </div>
+
   <script>
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -879,7 +926,6 @@
       const dateOptions = { day: 'numeric', month: 'long' };
       document.getElementById('day-name').textContent = now.toLocaleDateString('ru-RU', options);
       document.getElementById('current-date').textContent = now.toLocaleDateString('ru-RU', dateOptions);
-      document.getElementById('streak-count').textContent = state.streak;
       updateStatsDate();
     }
 
@@ -962,7 +1008,7 @@
       if (state.counters.workout > 0) completedTasks++;
       completedTasks += state.goals.filter(g => g.completed).length;
 
-      const percent = Math.round((completedTasks / totalTasks) * 100);
+      const percent = Math.min(100, Math.round((completedTasks / totalTasks) * 100));
       const circumference = 2 * Math.PI * 28;
       const offset = circumference - (percent / 100) * circumference;
       document.getElementById('progress-circle').style.strokeDashoffset = offset;
@@ -1141,15 +1187,15 @@
           
           if (dayData.completedToday) perfectDays++;
           
-          if (dayData.prayers.fajr) fajrCount++;
-          if (dayData.prayers.zuhr) zuhrCount++;
-          if (dayData.prayers.asr) asrCount++;
-          if (dayData.prayers.maghrib) maghribCount++;
-          if (dayData.prayers.isha) ishaCount++;
+          if (dayData.prayers && dayData.prayers.fajr) fajrCount++;
+          if (dayData.prayers && dayData.prayers.zuhr) zuhrCount++;
+          if (dayData.prayers && dayData.prayers.asr) asrCount++;
+          if (dayData.prayers && dayData.prayers.maghrib) maghribCount++;
+          if (dayData.prayers && dayData.prayers.isha) ishaCount++;
           
-          quranPages += dayData.counters.quran;
-          bookPages += dayData.counters.book;
-          workoutMins += dayData.counters.workout;
+          quranPages += dayData.counters?.quran || 0;
+          bookPages += dayData.counters?.book || 0;
+          workoutMins += dayData.counters?.workout || 0;
         }
       }
       
@@ -1186,15 +1232,15 @@
           
           if (dayData.completedToday) perfectDays++;
           
-          if (dayData.prayers.fajr) fajrCount++;
-          if (dayData.prayers.zuhr) zuhrCount++;
-          if (dayData.prayers.asr) asrCount++;
-          if (dayData.prayers.maghrib) maghribCount++;
-          if (dayData.prayers.isha) ishaCount++;
+          if (dayData.prayers && dayData.prayers.fajr) fajrCount++;
+          if (dayData.prayers && dayData.prayers.zuhr) zuhrCount++;
+          if (dayData.prayers && dayData.prayers.asr) asrCount++;
+          if (dayData.prayers && dayData.prayers.maghrib) maghribCount++;
+          if (dayData.prayers && dayData.prayers.isha) ishaCount++;
           
-          quranPages += dayData.counters.quran;
-          bookPages += dayData.counters.book;
-          workoutMins += dayData.counters.workout;
+          quranPages += dayData.counters?.quran || 0;
+          bookPages += dayData.counters?.book || 0;
+          workoutMins += dayData.counters?.workout || 0;
         }
       }
       
@@ -1217,7 +1263,8 @@
     function updateStatsDisplay() {
       document.getElementById('stat-total-days').textContent = state.streak;
       document.getElementById('stat-perfect-days').textContent = isDayComplete() ? state.streak : state.streak - 1;
-      document.getElementById('stat-perfect-percent').textContent = isDayComplete() ? '100%' : `${Math.round(((state.streak - 1) / state.streak) * 100)}%`;
+      const perfectPercent = state.streak > 1 ? Math.round(((state.streak - (isDayComplete() ? 0 : 1)) / state.streak) * 100) : (isDayComplete() ? 100 : 0);
+      document.getElementById('stat-perfect-percent').textContent = `${perfectPercent}%`;
       
       document.getElementById('stat-fajr').textContent = state.prayers.fajr ? '1' : '0';
       document.getElementById('stat-zuhr').textContent = state.prayers.zuhr ? '1' : '0';
@@ -1233,7 +1280,7 @@
       
       document.getElementById('stat-quran').textContent = state.counters.quran;
       document.getElementById('stat-book').textContent = state.counters.book;
-      document.getElementById('stat-reading-days').textContent = (state.counters.quran > 0 || state.counters.book > 0) ? state.streak : 0;
+      document.getElementById('stat-reading-days').textContent = (state.counters.quran > 0 || state.counters.book > 0) ? '1' : '0';
       
       document.getElementById('stat-workout-count').textContent = state.counters.workout > 0 ? '1' : '0';
       document.getElementById('stat-workout-mins').textContent = state.counters.workout;
@@ -1295,10 +1342,13 @@
       
       const prayerElements = document.querySelectorAll('[onclick^="togglePrayer"]');
       prayerElements.forEach(el => {
-        const prayer = el.getAttribute('onclick').match(/'(\w+)'/)[1];
-        const circle = el.querySelector('.toggle-circle');
-        if (state.prayers[prayer]) {
-          circle.classList.add('active');
+        const match = el.getAttribute('onclick').match(/'(\w+)'/);
+        if (match) {
+          const prayer = match[1];
+          const circle = el.querySelector('.toggle-circle');
+          if (state.prayers[prayer]) {
+            circle.classList.add('active');
+          }
         }
       });
       
