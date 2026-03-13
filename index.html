@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
   <title>Nafs Control</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -218,13 +218,33 @@
       padding-top: 0.75rem;
       padding-bottom: 0.75rem;
     }
+    .sync-status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    .sync-status.syncing {
+      opacity: 1;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
   </style>
 </head>
 <body>
+  <div class="sync-status" id="sync-indicator"></div>
   <div class="app-bg" id="app-bg"></div>
-<div class="relative h-screen flex flex-col max-w-md mx-auto w-full">
-  <!-- Убрана верхняя панель с часами, Wi-Fi и батареей -->
-    
+  
+  <div class="relative h-screen flex flex-col max-w-md mx-auto w-full">
     <!-- Main Content -->
     <div id="main-content" class="flex-1 overflow-y-auto px-4 pb-28 fade-in">
       <div class="flex justify-between items-center mb-4 mt-2">
@@ -232,7 +252,6 @@
           <p class="text-xs opacity-50" id="day-name">Понедельник</p>
           <h2 class="text-2xl font-bold" id="current-date">24 Февраля</h2>
         </div>
-        <!-- Убран желтый значок -->
       </div>
       
       <div class="glass-panel rounded-2xl p-4 mb-6 flex items-center gap-4">
@@ -351,10 +370,8 @@
       </div>
     </div>
 
-<!-- Stats Content -->
-<div id="stats-content" class="hidden flex-1 overflow-y-auto px-4 pb-24 fade-in">
-  <!-- Верхняя панель полностью удалена -->
-      
+    <!-- Stats Content -->
+    <div id="stats-content" class="hidden flex-1 overflow-y-auto px-4 pb-24 fade-in">
       <div class="glass-panel rounded-2xl p-4 mb-6">
         <div class="flex justify-between items-center">
           <div>
@@ -648,7 +665,7 @@
       </div>
     </div>
 
-    <!-- Bottom Navigation - Без заметок -->
+    <!-- Bottom Navigation -->
     <div class="absolute bottom-0 w-full glass-panel rounded-t-3xl p-3 pb-5 flex justify-around items-center z-20">
       <div class="nav-item active" onclick="switchView('main')" id="nav-main">
         <i class="fas fa-home"></i>
@@ -669,12 +686,18 @@
   </div>
 
   <script>
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.setHeaderColor('#000000');
+    // ============ ИНИЦИАЛИЗАЦИЯ TELEGRAM ============
+    const tg = window.Telegram?.WebApp;
+    const cloudStorage = tg?.CloudStorage;
+    const hasCloudStorage = !!cloudStorage;
+    
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#000000');
     }
     
+    // ============ УТИЛИТЫ ============
     function haptic(style = 'light') {
       if (navigator.vibrate) {
         const patterns = {
@@ -686,7 +709,7 @@
         };
         navigator.vibrate(patterns[style] || patterns.light);
       }
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+      if (tg?.HapticFeedback) {
         const tgPatterns = {
           light: 'light',
           medium: 'medium',
@@ -694,10 +717,29 @@
           success: 'success',
           perfect: 'success'
         };
-        window.Telegram.WebApp.HapticFeedback.impactOccurred(tgPatterns[style] || 'light');
+        tg.HapticFeedback.impactOccurred(tgPatterns[style] || 'light');
       }
     }
-
+    
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+    
+    function showSyncIndicator() {
+      const indicator = document.getElementById('sync-indicator');
+      indicator.classList.add('syncing');
+      setTimeout(() => indicator.classList.remove('syncing'), 1000);
+    }
+    
+    // ============ СОСТОЯНИЕ ============
     const state = {
       currentDate: new Date(),
       statsDate: new Date(),
@@ -706,9 +748,11 @@
       azkar: { morning: false, evening: false, night: false },
       counters: { quran: 0, book: 0, workout: 0 },
       goals: [],
-      history: {}
+      history: {},
+      cloudAvailable: hasCloudStorage,
+      dataVersion: 2
     };
-
+    
     const bgImages = [
       "https://i.imgur.com/d0mbjd7.jpg",
       "https://i.imgur.com/HWaBbn1.jpg",
@@ -716,60 +760,13 @@
       "https://i.imgur.com/NDftvos.jpg",
       "https://i.imgur.com/HURwLMr.jpg"
     ];
-
-    function setRandomBackground() {
-      const randomIndex = Math.floor(Math.random() * bgImages.length);
-      const bgElement = document.getElementById('app-bg');
-      bgElement.style.backgroundImage = `url('${bgImages[randomIndex]}')`;
-    }
-
-    function loadState() {
-      const saved = localStorage.getItem('nafsControlState');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const lastDate = parsed.lastDate;
-        const today = new Date().toDateString();
-        
-        if (lastDate && lastDate !== today && parsed.completedToday) {
-          saveDailyHistory(lastDate, parsed);
-        }
-        
-        if (lastDate !== today) {
-          if (parsed.completedToday) {
-            state.streak = (parsed.streak || 0) + 1;
-          } else {
-            state.streak = 1;
-          }
-          state.prayers = { fajr: false, zuhr: false, asr: false, maghrib: false, isha: false };
-          state.azkar = { morning: false, evening: false, night: false };
-          state.counters = { quran: 0, book: 0, workout: 0 };
-          state.goals = [];
-        } else {
-          state.prayers = parsed.prayers || state.prayers;
-          state.azkar = parsed.azkar || state.azkar;
-          state.counters = parsed.counters || state.counters;
-          state.goals = parsed.goals || [];
-          state.streak = parsed.streak || 1;
-        }
-        state.history = parsed.history || {};
-      }
-      state.currentDate = new Date();
-      state.statsDate = new Date();
-    }
-
-    function saveDailyHistory(dateStr, data) {
-      state.history[dateStr] = {
-        streak: data.streak || 1,
-        completedToday: data.completedToday || false,
-        prayers: data.prayers || state.prayers,
-        azkar: data.azkar || state.azkar,
-        counters: data.counters || state.counters,
-        goals: data.goals || []
-      };
-    }
-
-    function saveState() {
+    
+    // ============ СОХРАНЕНИЕ (ГИБРИДНОЕ) ============
+    async function saveState() {
+      showSyncIndicator();
+      
       const data = {
+        version: state.dataVersion,
         lastDate: new Date().toDateString(),
         completedToday: isDayComplete(),
         streak: state.streak,
@@ -777,17 +774,167 @@
         azkar: state.azkar,
         counters: state.counters,
         goals: state.goals,
-        history: state.history
+        history: state.history,
+        updatedAt: Date.now()
       };
-      localStorage.setItem('nafsControlState', JSON.stringify(data));
+      
+      const json = JSON.stringify(data);
+      
+      // Всегда сохраняем в LocalStorage (резервная копия)
+      try {
+        localStorage.setItem('nafsControlState', json);
+      } catch (e) {
+        console.error('LocalStorage save failed:', e);
+      }
+      
+      // Если есть CloudStorage — сохраняем туда
+      if (hasCloudStorage) {
+        return new Promise((resolve) => {
+          cloudStorage.setItem('nafsData', json, (err) => {
+            if (err) {
+              console.error('Cloud save failed:', err);
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+        });
+      }
+      
+      return true;
     }
-
+    
+    // ============ ЗАГРУЗКА (С МИГРАЦИЕЙ) ============
+    async function loadState() {
+      if (hasCloudStorage) {
+        return new Promise((resolve) => {
+          cloudStorage.getItem('nafsData', (err, cloudValue) => {
+            if (!err && cloudValue) {
+              // Есть облачные данные — используем их
+              try {
+                const parsed = JSON.parse(cloudValue);
+                applyState(parsed);
+                console.log('Loaded from CloudStorage');
+                resolve(true);
+                return;
+              } catch (e) {
+                console.error('Cloud parse error:', e);
+              }
+            }
+            
+            // Нет облачных данных — пробуем мигрировать из LocalStorage
+            console.log('No cloud data, trying local migration...');
+            migrateFromLocalStorage();
+            resolve(false);
+          });
+        });
+      } else {
+        // Нет CloudStorage — используем LocalStorage
+        migrateFromLocalStorage();
+        return false;
+      }
+    }
+    
+    function migrateFromLocalStorage() {
+      const local = localStorage.getItem('nafsControlState');
+      if (local) {
+        try {
+          const parsed = JSON.parse(local);
+          applyState(parsed);
+          console.log('Migrated from LocalStorage');
+          
+          // Сразу заливаем в облако, если доступно
+          if (hasCloudStorage) {
+            cloudStorage.setItem('nafsData', local, (err) => {
+              if (!err) console.log('Migrated to cloud successfully');
+            });
+          }
+        } catch (e) {
+          console.error('Local parse error:', e);
+          initDefaultState();
+        }
+      } else {
+        console.log('No local data, starting fresh');
+        initDefaultState();
+      }
+    }
+    
+    function applyState(parsed) {
+      if (!parsed || typeof parsed !== 'object') {
+        console.error('Invalid data structure');
+        initDefaultState();
+        return;
+      }
+      
+      const today = new Date().toDateString();
+      const lastDate = parsed.lastDate;
+      
+      // Сохраняем вчерашний день в историю, если он был завершён
+      if (lastDate && lastDate !== today && parsed.completedToday) {
+        saveDailyHistory(lastDate, parsed);
+      }
+      
+      // Определяем, новый ли день
+      if (lastDate !== today) {
+        // Новый день — сброс daily-значений
+        if (parsed.completedToday) {
+          state.streak = (parsed.streak || 0) + 1;
+        } else {
+          state.streak = 1;
+        }
+        state.prayers = { fajr: false, zuhr: false, asr: false, maghrib: false, isha: false };
+        state.azkar = { morning: false, evening: false, night: false };
+        state.counters = { quran: 0, book: 0, workout: 0 };
+        state.goals = [];
+      } else {
+        // Тот же день — загружаем всё
+        state.streak = parsed.streak || 1;
+        state.prayers = parsed.prayers || state.prayers;
+        state.azkar = parsed.azkar || state.azkar;
+        state.counters = parsed.counters || state.counters;
+        state.goals = Array.isArray(parsed.goals) ? parsed.goals : [];
+      }
+      
+      // История сохраняется всегда
+      state.history = parsed.history || {};
+      
+      // Сразу сохраняем актуальное состояние
+      saveState();
+    }
+    
+    function initDefaultState() {
+      state.streak = 1;
+      state.prayers = { fajr: false, zuhr: false, asr: false, maghrib: false, isha: false };
+      state.azkar = { morning: false, evening: false, night: false };
+      state.counters = { quran: 0, book: 0, workout: 0 };
+      state.goals = [];
+      state.history = {};
+      saveState();
+    }
+    
+    function saveDailyHistory(dateStr, data) {
+      state.history[dateStr] = {
+        streak: data.streak || 1,
+        completedToday: data.completedToday || false,
+        prayers: data.prayers || {},
+        azkar: data.azkar || {},
+        counters: data.counters || {},
+        goals: data.goals || []
+      };
+    }
+    
     function isDayComplete() {
       const allPrayers = Object.values(state.prayers).every(v => v);
       const allAzkar = Object.values(state.azkar).every(v => v);
       return allPrayers && allAzkar;
     }
-
+    
+    // ============ UI ФУНКЦИИ ============
+    function setRandomBackground() {
+      const randomIndex = Math.floor(Math.random() * bgImages.length);
+      document.getElementById('app-bg').style.backgroundImage = `url('${bgImages[randomIndex]}')`;
+    }
+    
     function initDateDisplay() {
       const now = new Date();
       const options = { weekday: 'long' };
@@ -796,106 +943,84 @@
       document.getElementById('current-date').textContent = now.toLocaleDateString('ru-RU', dateOptions);
       updateStatsDate();
     }
-
+    
     function updateStatsDate() {
       const options = { day: 'numeric', month: 'long', year: 'numeric' };
       document.getElementById('stats-date').textContent = state.statsDate.toLocaleDateString('ru-RU', options);
     }
-
+    
     function setStatsToToday() {
       haptic('success');
       state.statsDate = new Date();
       updateStatsDate();
       updateStatsDisplay();
     }
-
-    function updateClock() {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('clock').innerText = `${hours}:${minutes}`;
-    }
-
-    setInterval(updateClock, 1000);
-
+    
+    // ============ ИНТЕРАКТИВНОСТЬ ============
     function togglePrayer(prayer, element) {
       haptic('light');
       state.prayers[prayer] = !state.prayers[prayer];
       const circle = element.querySelector('.toggle-circle');
-      if (state.prayers[prayer]) {
-        circle.classList.add('active');
-      } else {
-        circle.classList.remove('active');
-      }
+      circle.classList.toggle('active', state.prayers[prayer]);
       updateProgress();
       updateStatusIndicators();
       saveState();
       
-      if (isDayComplete()) {
-        haptic('perfect');
-      }
+      if (isDayComplete()) haptic('perfect');
     }
-
+    
     function toggleAzkar(time, element) {
       haptic('light');
       state.azkar[time] = !state.azkar[time];
       const checkbox = element.querySelector('.custom-checkbox');
-      if (state.azkar[time]) {
-        checkbox.classList.add('checked');
-      } else {
-        checkbox.classList.remove('checked');
-      }
+      checkbox.classList.toggle('checked', state.azkar[time]);
       updateProgress();
       updateStatusIndicators();
       saveState();
       
-      if (isDayComplete()) {
-        haptic('perfect');
-      }
+      if (isDayComplete()) haptic('perfect');
     }
-
+    
     function updateCounter(type, delta) {
       haptic('light');
-      state.counters[type] += delta;
-      if (state.counters[type] < 0) state.counters[type] = 0;
+      state.counters[type] = Math.max(0, state.counters[type] + delta);
       const formatted = String(state.counters[type]).padStart(3, '0');
       const suffix = type === 'workout' ? ' мин.' : ' стр.';
-      document.getElementById(`${type}-count`).innerText = `${formatted}${suffix}`;
+      document.getElementById(`${type}-count`).textContent = `${formatted}${suffix}`;
       updateProgress();
       updateStatusIndicators();
       saveState();
     }
-
+    
     function updateProgress() {
       const totalTasks = 12;
-      let completedTasks = 0;
-      completedTasks += Object.values(state.prayers).filter(v => v).length;
-      completedTasks += Object.values(state.azkar).filter(v => v).length;
-      if (state.counters.quran > 0) completedTasks++;
-      if (state.counters.book > 0) completedTasks++;
-      if (state.counters.workout > 0) completedTasks++;
-      completedTasks += state.goals.filter(g => g.completed).length;
-
-      const percent = Math.min(100, Math.round((completedTasks / totalTasks) * 100));
+      let completed = 0;
+      completed += Object.values(state.prayers).filter(v => v).length;
+      completed += Object.values(state.azkar).filter(v => v).length;
+      if (state.counters.quran > 0) completed++;
+      if (state.counters.book > 0) completed++;
+      if (state.counters.workout > 0) completed++;
+      completed += state.goals.filter(g => g.completed).length;
+      
+      const percent = Math.min(100, Math.round((completed / totalTasks) * 100));
       const circumference = 2 * Math.PI * 28;
       const offset = circumference - (percent / 100) * circumference;
       document.getElementById('progress-circle').style.strokeDashoffset = offset;
       document.getElementById('progress-percent').textContent = `${percent}%`;
-      document.getElementById('tasks-completed').textContent = `${completedTasks} из ${totalTasks} задач`;
+      document.getElementById('tasks-completed').textContent = `${completed} из ${totalTasks} задач`;
     }
-
+    
     function updateStatusIndicators() {
-      const namazComplete = Object.values(state.prayers).every(v => v);
-      document.getElementById('status-namaz').classList.toggle('completed', namazComplete);
-      
-      const azkarComplete = Object.values(state.azkar).every(v => v);
-      document.getElementById('status-azkar').classList.toggle('completed', azkarComplete);
-      
+      document.getElementById('status-namaz').classList.toggle('completed', 
+        Object.values(state.prayers).every(v => v));
+      document.getElementById('status-azkar').classList.toggle('completed', 
+        Object.values(state.azkar).every(v => v));
       document.getElementById('status-quran').classList.toggle('completed', state.counters.quran > 0);
       document.getElementById('status-book').classList.toggle('completed', state.counters.book > 0);
       document.getElementById('status-workout').classList.toggle('completed', state.counters.workout > 0);
     }
-
+    
+    // ============ ЦЕЛИ ============
     function addGoal() {
       haptic('medium');
       const goalText = prompt('Введите цель:');
@@ -910,7 +1035,7 @@
         saveState();
       }
     }
-
+    
     function toggleGoal(id) {
       haptic('light');
       const goal = state.goals.find(g => g.id === id);
@@ -921,7 +1046,7 @@
         saveState();
       }
     }
-
+    
     function deleteGoal(id) {
       haptic('light');
       state.goals = state.goals.filter(g => g.id !== id);
@@ -929,7 +1054,7 @@
       updateProgress();
       saveState();
     }
-
+    
     function renderGoals() {
       const container = document.getElementById('goals-list');
       if (state.goals.length === 0) {
@@ -942,7 +1067,7 @@
             <div class="custom-checkbox ${goal.completed ? 'checked' : ''}">
               <i class="fas fa-check"></i>
             </div>
-            <span class="text-sm ${goal.completed ? 'line-through' : ''}">${goal.text}</span>
+            <span class="text-sm ${goal.completed ? 'line-through' : ''}">${escapeHtml(goal.text)}</span>
           </div>
           <button onclick="deleteGoal(${goal.id})" class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
             <i class="fas fa-trash text-xs"></i>
@@ -950,34 +1075,31 @@
         </div>
       `).join('');
     }
-
+    
+    // ============ СТАТИСТИКА ============
     function calculateMonthlyStats() {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
       
-      let totalDays = 0;
-      let perfectDays = 0;
-      let fajrCount = 0, zuhrCount = 0, asrCount = 0, maghribCount = 0, ishaCount = 0;
-      let quranPages = 0, bookPages = 0, workoutMins = 0;
+      let totalDays = 0, perfectDays = 0;
+      let fajr = 0, zuhr = 0, asr = 0, maghrib = 0, isha = 0;
+      let quran = 0, book = 0, workout = 0;
       
       for (const dateStr in state.history) {
         const date = new Date(dateStr);
         if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
           totalDays++;
-          const dayData = state.history[dateStr];
-          
-          if (dayData.completedToday) perfectDays++;
-          
-          if (dayData.prayers && dayData.prayers.fajr) fajrCount++;
-          if (dayData.prayers && dayData.prayers.zuhr) zuhrCount++;
-          if (dayData.prayers && dayData.prayers.asr) asrCount++;
-          if (dayData.prayers && dayData.prayers.maghrib) maghribCount++;
-          if (dayData.prayers && dayData.prayers.isha) ishaCount++;
-          
-          quranPages += dayData.counters?.quran || 0;
-          bookPages += dayData.counters?.book || 0;
-          workoutMins += dayData.counters?.workout || 0;
+          const day = state.history[dateStr];
+          if (day.completedToday) perfectDays++;
+          if (day.prayers?.fajr) fajr++;
+          if (day.prayers?.zuhr) zuhr++;
+          if (day.prayers?.asr) asr++;
+          if (day.prayers?.maghrib) maghrib++;
+          if (day.prayers?.isha) isha++;
+          quran += day.counters?.quran || 0;
+          book += day.counters?.book || 0;
+          workout += day.counters?.workout || 0;
         }
       }
       
@@ -986,43 +1108,40 @@
       document.getElementById('month-total-days').textContent = totalDays;
       document.getElementById('month-perfect-days').textContent = perfectDays;
       document.getElementById('month-perfect-percent').textContent = `${perfectPercent}%`;
-      document.getElementById('month-fajr').textContent = fajrCount;
-      document.getElementById('month-zuhr').textContent = zuhrCount;
-      document.getElementById('month-asr').textContent = asrCount;
-      document.getElementById('month-maghrib').textContent = maghribCount;
-      document.getElementById('month-isha').textContent = ishaCount;
-      document.getElementById('month-quran').textContent = quranPages;
-      document.getElementById('month-book').textContent = bookPages;
-      document.getElementById('month-workout-mins').textContent = workoutMins;
-      document.getElementById('month-workout-avg').textContent = totalDays > 0 ? `${Math.round(workoutMins / totalDays)} мин.` : '0 мин.';
+      document.getElementById('month-fajr').textContent = fajr;
+      document.getElementById('month-zuhr').textContent = zuhr;
+      document.getElementById('month-asr').textContent = asr;
+      document.getElementById('month-maghrib').textContent = maghrib;
+      document.getElementById('month-isha').textContent = isha;
+      document.getElementById('month-quran').textContent = quran;
+      document.getElementById('month-book').textContent = book;
+      document.getElementById('month-workout-mins').textContent = workout;
+      document.getElementById('month-workout-avg').textContent = 
+        totalDays > 0 ? `${Math.round(workout / totalDays)} мин.` : '0 мин.';
     }
-
+    
     function calculateYearlyStats() {
       const now = new Date();
       const currentYear = now.getFullYear();
       
-      let totalDays = 0;
-      let perfectDays = 0;
-      let fajrCount = 0, zuhrCount = 0, asrCount = 0, maghribCount = 0, ishaCount = 0;
-      let quranPages = 0, bookPages = 0, workoutMins = 0;
+      let totalDays = 0, perfectDays = 0;
+      let fajr = 0, zuhr = 0, asr = 0, maghrib = 0, isha = 0;
+      let quran = 0, book = 0, workout = 0;
       
       for (const dateStr in state.history) {
         const date = new Date(dateStr);
         if (date.getFullYear() === currentYear) {
           totalDays++;
-          const dayData = state.history[dateStr];
-          
-          if (dayData.completedToday) perfectDays++;
-          
-          if (dayData.prayers && dayData.prayers.fajr) fajrCount++;
-          if (dayData.prayers && dayData.prayers.zuhr) zuhrCount++;
-          if (dayData.prayers && dayData.prayers.asr) asrCount++;
-          if (dayData.prayers && dayData.prayers.maghrib) maghribCount++;
-          if (dayData.prayers && dayData.prayers.isha) ishaCount++;
-          
-          quranPages += dayData.counters?.quran || 0;
-          bookPages += dayData.counters?.book || 0;
-          workoutMins += dayData.counters?.workout || 0;
+          const day = state.history[dateStr];
+          if (day.completedToday) perfectDays++;
+          if (day.prayers?.fajr) fajr++;
+          if (day.prayers?.zuhr) zuhr++;
+          if (day.prayers?.asr) asr++;
+          if (day.prayers?.maghrib) maghrib++;
+          if (day.prayers?.isha) isha++;
+          quran += day.counters?.quran || 0;
+          book += day.counters?.book || 0;
+          workout += day.counters?.workout || 0;
         }
       }
       
@@ -1031,23 +1150,28 @@
       document.getElementById('year-total-days').textContent = totalDays;
       document.getElementById('year-perfect-days').textContent = perfectDays;
       document.getElementById('year-perfect-percent').textContent = `${perfectPercent}%`;
-      document.getElementById('year-fajr').textContent = fajrCount;
-      document.getElementById('year-zuhr').textContent = zuhrCount;
-      document.getElementById('year-asr').textContent = asrCount;
-      document.getElementById('year-maghrib').textContent = maghribCount;
-      document.getElementById('year-isha').textContent = ishaCount;
-      document.getElementById('year-quran').textContent = quranPages;
-      document.getElementById('year-book').textContent = bookPages;
-      document.getElementById('year-workout-mins').textContent = workoutMins;
-      document.getElementById('year-workout-avg').textContent = totalDays > 0 ? `${Math.round(workoutMins / totalDays)} мин.` : '0 мин.';
+      document.getElementById('year-fajr').textContent = fajr;
+      document.getElementById('year-zuhr').textContent = zuhr;
+      document.getElementById('year-asr').textContent = asr;
+      document.getElementById('year-maghrib').textContent = maghrib;
+      document.getElementById('year-isha').textContent = isha;
+      document.getElementById('year-quran').textContent = quran;
+      document.getElementById('year-book').textContent = book;
+      document.getElementById('year-workout-mins').textContent = workout;
+      document.getElementById('year-workout-avg').textContent = 
+        totalDays > 0 ? `${Math.round(workout / totalDays)} мин.` : '0 мин.';
     }
-
+    
     function updateStatsDisplay() {
+      // Дневная статистика
       document.getElementById('stat-total-days').textContent = state.streak;
-      document.getElementById('stat-perfect-days').textContent = isDayComplete() ? state.streak : state.streak - 1;
-      const perfectPercent = state.streak > 1 ? Math.round(((state.streak - (isDayComplete() ? 0 : 1)) / state.streak) * 100) : (isDayComplete() ? 100 : 0);
+      document.getElementById('stat-perfect-days').textContent = 
+        isDayComplete() ? state.streak : Math.max(0, state.streak - 1);
+      const perfectPercent = state.streak > 0 ? 
+        Math.round(((isDayComplete() ? state.streak : state.streak - 1) / state.streak) * 100) : 0;
       document.getElementById('stat-perfect-percent').textContent = `${perfectPercent}%`;
       
+      // Намазы
       document.getElementById('stat-fajr').textContent = state.prayers.fajr ? '1' : '0';
       document.getElementById('stat-zuhr').textContent = state.prayers.zuhr ? '1' : '0';
       document.getElementById('stat-asr').textContent = state.prayers.asr ? '1' : '0';
@@ -1060,89 +1184,81 @@
       document.getElementById('indicator-maghrib').classList.toggle('completed', state.prayers.maghrib);
       document.getElementById('indicator-isha').classList.toggle('completed', state.prayers.isha);
       
+      // Чтение и тренировки
       document.getElementById('stat-quran').textContent = state.counters.quran;
       document.getElementById('stat-book').textContent = state.counters.book;
-      document.getElementById('stat-reading-days').textContent = (state.counters.quran > 0 || state.counters.book > 0) ? '1' : '0';
+      document.getElementById('stat-reading-days').textContent = 
+        (state.counters.quran > 0 || state.counters.book > 0) ? '1' : '0';
       
       document.getElementById('stat-workout-count').textContent = state.counters.workout > 0 ? '1' : '0';
       document.getElementById('stat-workout-mins').textContent = state.counters.workout;
       document.getElementById('stat-workout-avg').textContent = `${state.counters.workout} мин.`;
       
+      // Азкары
       document.getElementById('stat-azkar-morning').textContent = state.azkar.morning ? '1' : '0';
       document.getElementById('stat-azkar-evening').textContent = state.azkar.evening ? '1' : '0';
       document.getElementById('stat-azkar-night').textContent = state.azkar.night ? '1' : '0';
       
+      // Месяц и год
       calculateMonthlyStats();
       calculateYearlyStats();
     }
-
+    
     function switchStatsTab(tabName) {
       haptic('medium');
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.stats-tab').forEach(tab => tab.classList.remove('active'));
       
-      document.querySelector(`.tab-btn[onclick="switchStatsTab('${tabName}')"]`).classList.add('active');
+      event.target.classList.add('active');
       document.getElementById(`${tabName}-stats`).classList.add('active');
     }
-
+    
     function switchView(viewName) {
       haptic('medium');
-      const main = document.getElementById('main-content');
-      const stats = document.getElementById('stats-content');
+      document.getElementById('main-content').classList.toggle('hidden', viewName !== 'main');
+      document.getElementById('stats-content').classList.toggle('hidden', viewName !== 'stats');
       
-      const navMain = document.getElementById('nav-main');
-      const navStats = document.getElementById('nav-stats');
+      document.getElementById('nav-main').classList.toggle('active', viewName === 'main');
+      document.getElementById('nav-stats').classList.toggle('active', viewName === 'stats');
       
-      main.classList.add('hidden');
-      stats.classList.add('hidden');
-      
-      navMain.classList.remove('active');
-      navStats.classList.remove('active');
-      
-      if (viewName === 'main') {
-        main.classList.remove('hidden');
-        navMain.classList.add('active');
-      } else if (viewName === 'stats') {
-        stats.classList.remove('hidden');
-        navStats.classList.add('active');
-        updateStatsDisplay();
-      }
+      if (viewName === 'stats') updateStatsDisplay();
     }
-
-    function init() {
+    
+    // ============ ИНИЦИАЛИЗАЦИЯ ============
+    async function init() {
       setRandomBackground();
-      loadState();
+      await loadState();
       initDateDisplay();
       
-      document.getElementById('quran-count').textContent = `${String(state.counters.quran).padStart(3, '0')} стр.`;
-      document.getElementById('book-count').textContent = `${String(state.counters.book).padStart(3, '0')} стр.`;
-      document.getElementById('workout-count').textContent = `${String(state.counters.workout).padStart(3, '0')} мин.`;
+      // Установка начальных значений счётчиков
+      document.getElementById('quran-count').textContent = 
+        `${String(state.counters.quran).padStart(3, '0')} стр.`;
+      document.getElementById('book-count').textContent = 
+        `${String(state.counters.book).padStart(3, '0')} стр.`;
+      document.getElementById('workout-count').textContent = 
+        `${String(state.counters.workout).padStart(3, '0')} мин.`;
       
-      const prayerElements = document.querySelectorAll('[onclick^="togglePrayer"]');
-      prayerElements.forEach(el => {
+      // Восстановление состояния намазов
+      document.querySelectorAll('[onclick^="togglePrayer"]').forEach(el => {
         const match = el.getAttribute('onclick').match(/'(\w+)'/);
-        if (match) {
-          const prayer = match[1];
-          const circle = el.querySelector('.toggle-circle');
-          if (state.prayers[prayer]) {
-            circle.classList.add('active');
-          }
+        if (match && state.prayers[match[1]]) {
+          el.querySelector('.toggle-circle').classList.add('active');
         }
       });
       
+      // Восстановление азкаров
       ['morning', 'evening', 'night'].forEach(time => {
-        const checkbox = document.getElementById(`azkar-${time}`);
         if (state.azkar[time]) {
-          checkbox.classList.add('checked');
+          document.getElementById(`azkar-${time}`).classList.add('checked');
         }
       });
       
       renderGoals();
       updateProgress();
       updateStatusIndicators();
-      updateClock();
     }
-
+    
+    // Запуск
     init();
   </script>
 </body>
